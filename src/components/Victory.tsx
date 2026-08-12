@@ -1,4 +1,5 @@
 import { motion } from 'framer-motion'
+import { useLocale } from '../i18n/LocaleContext'
 
 export function Victory({
   steps,
@@ -11,6 +12,7 @@ export function Victory({
   loopbacks: number
   onRestart: () => void
 }) {
+  const { t } = useLocale()
   // Answering "no" at the very first question is one step: straight out.
   const immediate = steps <= 1
 
@@ -30,25 +32,23 @@ export function Victory({
         🎉
       </motion.div>
 
-      <p className="mb-4 text-[11px] font-semibold tracking-[0.22em] text-[color:var(--color-halo-dim)] uppercase">
-        The paradox dissolves
+      <p className="label mb-4 text-[11px] font-semibold text-[color:var(--color-halo-dim)]">
+        {t.ui.paradoxDissolves}
       </p>
 
       <h1 className="font-[family-name:var(--font-display)] text-4xl leading-tight text-balance text-white sm:text-5xl">
-        Congratulations.
+        {t.ui.congratulations}
       </h1>
 
       <p className="mx-auto mt-6 max-w-md text-base leading-relaxed text-white/60">
-        {immediate
-          ? 'You answered in one move. No contradiction to resolve, no circle to walk — the problem of evil simply never opens.'
-          : 'You found the only answer the diagram accepts without contradicting itself. Everything else led back to a question you had already answered.'}
+        {immediate ? t.ui.victoryImmediate : t.ui.victoryWalked}
       </p>
 
       {!immediate && (
         <div className="mx-auto mt-9 grid max-w-sm grid-cols-3 gap-3">
-          <Stat label="Steps" value={steps} />
-          <Stat label="Sent back" value={loopbacks} />
-          <Stat label="Circles" value={loops} />
+          <Stat label={t.ui.statSteps} value={steps} />
+          <Stat label={t.ui.statSentBack} value={loopbacks} />
+          <Stat label={t.ui.statCircles} value={loops} />
         </div>
       )}
 
@@ -57,7 +57,7 @@ export function Victory({
         onClick={onRestart}
         className="mt-10 cursor-pointer rounded-2xl border border-white/15 px-8 py-4 text-base font-medium text-white/85 transition-all duration-200 hover:border-white/35 hover:bg-white/[0.06] focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:outline-none active:scale-[0.985]"
       >
-        Walk it again
+        {t.ui.walkAgain}
       </button>
     </motion.div>
   )
@@ -67,7 +67,7 @@ function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-2xl border border-white/10 bg-white/[0.03] px-3 py-4">
       <p className="text-2xl font-semibold text-white tabular-nums">{value}</p>
-      <p className="mt-1 text-[10px] font-semibold tracking-[0.16em] text-white/35 uppercase">
+      <p className="label mt-1 text-[10px] font-semibold text-white/35">
         {label}
       </p>
     </div>

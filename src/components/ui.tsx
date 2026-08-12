@@ -25,7 +25,7 @@ export function AnswerButton({
     <button
       type="button"
       onClick={onClick}
-      className={`group cursor-pointer rounded-2xl border px-6 py-4 text-left text-base font-medium transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-white/40 active:scale-[0.985] ${
+      className={`group cursor-pointer rounded-2xl border px-6 py-4 text-start text-base font-medium transition-all duration-200 outline-none focus-visible:ring-2 focus-visible:ring-white/40 active:scale-[0.985] ${
         TONES[tone]
       } ${full ? 'w-full' : ''}`}
     >
@@ -33,7 +33,7 @@ export function AnswerButton({
         <span>{children}</span>
         <span
           aria-hidden
-          className="translate-x-0 text-white/25 transition-transform duration-200 group-hover:translate-x-1"
+          className="text-white/25 transition-transform duration-200 group-hover:translate-x-1 rtl:rotate-180 rtl:group-hover:-translate-x-1"
         >
           →
         </span>
@@ -44,7 +44,7 @@ export function AnswerButton({
 
 export function Eyebrow({ children }: { children: ReactNode }) {
   return (
-    <p className="mb-4 text-[11px] font-semibold tracking-[0.22em] text-[color:var(--color-halo-dim)] uppercase">
+    <p className="label mb-4 text-[11px] font-semibold text-[color:var(--color-halo-dim)]">
       {children}
     </p>
   )

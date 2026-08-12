@@ -1,19 +1,9 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { EXISTENCE_QUESTION, type QuizNode } from '../quiz/graph'
+import type { QuizNode } from '../quiz/graph'
+import { useLocale } from '../i18n/LocaleContext'
+import { choiceCopy, leafCopy, premiseCopy, questionCopy } from '../i18n/copy'
 import { AnswerButton, Eyebrow, Prompt } from './ui'
-
-/** Escalating nudges for the player stuck in the free-will circle. */
-function loopTaunt(loops: number): string | null {
-  if (loops <= 0) return null
-  if (loops === 1) return 'You have been here before.'
-  if (loops === 2) return 'Twice around. The question has not moved an inch.'
-  if (loops === 3) return 'Three laps. Epicurus is still waiting.'
-  if (loops < 6) return `${loops} laps. The circle does not have an exit here.`
-  if (loops < 10)
-    return `${loops} laps. There is one answer that ends this, and it is at the very top.`
-  return `${loops} laps. Genuinely, at this point, admiration.`
-}
 
 interface Props {
   node: QuizNode
@@ -36,6 +26,8 @@ export function NodeCard({
   onReason,
   onLeafExistence,
 }: Props) {
+  const { t } = useLocale()
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -44,81 +36,110 @@ export function NodeCard({
       transition={{ duration: 0.32, ease: [0.22, 1, 0.36, 1] }}
       className="glass w-full rounded-[28px] p-7 sm:p-10"
     >
-      {node.kind === 'binary' && (
-        <>
-          {node.eyebrow && <Eyebrow>{node.eyebrow}</Eyebrow>}
-          <Prompt>{node.prompt}</Prompt>
-          <div className="mt-9 grid gap-3 sm:grid-cols-2">
-            <AnswerButton tone="yes" full onClick={() => onBinary(true)}>
-              Yes
-            </AnswerButton>
-            <AnswerButton tone="no" full onClick={() => onBinary(false)}>
-              No
-            </AnswerButton>
-          </div>
-        </>
-      )}
+      {node.kind === 'binary' &&
+        (() => {
+          const copy = questionCopy(t, node.id)
+          return (
+            <>
+              <Eyebrow>{copy.eyebrow}</Eyebrow>
+              <Prompt>{copy.prompt}</Prompt>
+              <div className="mt-9 grid gap-3 sm:grid-cols-2">
+                <AnswerButton tone="yes" full onClick={() => onBinary(true)}>
+                  {t.ui.yes}
+                </AnswerButton>
+                <AnswerButton tone="no" full onClick={() => onBinary(false)}>
+                  {t.ui.no}
+                </AnswerButton>
+              </div>
+            </>
+          )
+        })()}
 
-      {node.kind === 'premise' && (
-        <>
-          {node.eyebrow && <Eyebrow>{node.eyebrow}</Eyebrow>}
-          <Prompt>{node.prompt}</Prompt>
-          <p className="mt-5 max-w-xl text-base leading-relaxed text-white/55">
-            {node.detail}
-          </p>
-          <div className="mt-9">
-            <AnswerButton tone="halo" onClick={onAcknowledge}>
-              {node.acknowledge}
-            </AnswerButton>
-          </div>
-        </>
-      )}
+      {node.kind === 'premise' &&
+        (() => {
+          const copy = premiseCopy(t, node.id)
+          return (
+            <>
+              <Eyebrow>{copy.eyebrow}</Eyebrow>
+              <Prompt>{copy.prompt}</Prompt>
+              <p className="mt-5 max-w-xl text-base leading-relaxed text-white/55">
+                {copy.detail}
+              </p>
+              <div className="mt-9">
+                <AnswerButton tone="halo" onClick={onAcknowledge}>
+                  {copy.acknowledge}
+                </AnswerButton>
+              </div>
+            </>
+          )
+        })()}
 
-      {node.kind === 'choice' && (
-        <ChoiceBody
-          key={node.id}
-          eyebrow={node.eyebrow}
-          prompt={node.prompt}
-          taunt={node.id === 'why-didnt' ? loopTaunt(loops) : null}
-          options={node.options}
-          placeholder={node.freeText.placeholder}
-          onChoose={onChoose}
-          onReason={onReason}
-        />
-      )}
+      {node.kind === 'choice' &&
+        (() => {
+          const copy = choiceCopy(t, node.id)
+          return (
+            <ChoiceBody
+              key={node.id}
+              eyebrow={copy.eyebrow}
+              prompt={copy.prompt}
+              taunt={node.id === 'why-didnt' ? t.taunt(loops) : null}
+              options={node.options.map((option) => ({
+                id: option.id,
+                label: copy.options[option.id] ?? option.id,
+              }))}
+              placeholder={copy.placeholder}
+              ownReasonLabel={t.ui.ownReason}
+              submitLabel={t.ui.submitReason}
+              onChoose={onChoose}
+              onReason={onReason}
+            />
+          )
+        })()}
 
-      {node.kind === 'leaf' && (
-        <>
-          <Eyebrow>Then it follows that</Eyebrow>
-          <Prompt>{node.conclusion}</Prompt>
-          <p className="mt-5 max-w-xl text-base leading-relaxed text-white/55">
-            {node.detail}
-          </p>
-          {lastReason && (
-            <p className="mt-5 max-w-xl border-l-2 border-[color:var(--color-halo)]/40 pl-4 text-sm leading-relaxed text-white/40 italic">
-              Your reason — “{lastReason}” — did not survive the next question.
-            </p>
-          )}
+      {node.kind === 'leaf' &&
+        (() => {
+          const copy = leafCopy(t, node.id)
+          return (
+            <>
+              <Eyebrow>{t.ui.thenItFollows}</Eyebrow>
+              <Prompt>{copy.conclusion}</Prompt>
+              <p className="mt-5 max-w-xl text-base leading-relaxed text-white/55">
+                {copy.detail}
+              </p>
+              {lastReason && (
+                <p className="mt-5 max-w-xl border-s-2 border-[color:var(--color-halo)]/40 ps-4 text-sm leading-relaxed text-white/40 italic">
+                  {t.ui.reasonEcho(lastReason)}
+                </p>
+              )}
 
-          <div className="mt-10 border-t border-white/10 pt-8">
-            <Eyebrow>So, one more time</Eyebrow>
-            <h2 className="font-[family-name:var(--font-display)] text-2xl text-white sm:text-3xl">
-              {EXISTENCE_QUESTION}
-            </h2>
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <AnswerButton tone="yes" full onClick={() => onLeafExistence(true)}>
-                Yes
-              </AnswerButton>
-              <AnswerButton tone="no" full onClick={() => onLeafExistence(false)}>
-                No
-              </AnswerButton>
-            </div>
-            <p className="mt-4 text-xs leading-relaxed text-white/30">
-              Saying yes sends you back to the question that brought you here.
-            </p>
-          </div>
-        </>
-      )}
+              <div className="mt-10 border-t border-white/10 pt-8">
+                <Eyebrow>{t.ui.soOneMoreTime}</Eyebrow>
+                <h2 className="font-[family-name:var(--font-display)] text-2xl text-white sm:text-3xl">
+                  {questionCopy(t, 'exist').prompt}
+                </h2>
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  <AnswerButton
+                    tone="yes"
+                    full
+                    onClick={() => onLeafExistence(true)}
+                  >
+                    {t.ui.yes}
+                  </AnswerButton>
+                  <AnswerButton
+                    tone="no"
+                    full
+                    onClick={() => onLeafExistence(false)}
+                  >
+                    {t.ui.no}
+                  </AnswerButton>
+                </div>
+                <p className="mt-4 text-xs leading-relaxed text-white/30">
+                  {t.ui.leafHint}
+                </p>
+              </div>
+            </>
+          )
+        })()}
     </motion.div>
   )
 }
@@ -129,14 +150,18 @@ function ChoiceBody({
   taunt,
   options,
   placeholder,
+  ownReasonLabel,
+  submitLabel,
   onChoose,
   onReason,
 }: {
-  eyebrow?: string
+  eyebrow: string
   prompt: string
   taunt: string | null
   options: { id: string; label: string }[]
   placeholder: string
+  ownReasonLabel: string
+  submitLabel: string
   onChoose: (id: string) => void
   onReason: (text: string) => void
 }) {
@@ -144,7 +169,7 @@ function ChoiceBody({
 
   return (
     <>
-      {eyebrow && <Eyebrow>{eyebrow}</Eyebrow>}
+      <Eyebrow>{eyebrow}</Eyebrow>
       <Prompt>{prompt}</Prompt>
 
       {taunt && (
@@ -174,9 +199,9 @@ function ChoiceBody({
       >
         <label
           htmlFor="reason"
-          className="mb-2 block text-[11px] font-semibold tracking-[0.18em] text-white/35 uppercase"
+          className="label mb-2 block text-[11px] font-semibold text-white/35"
         >
-          Or give your own reason
+          {ownReasonLabel}
         </label>
         <div className="flex flex-col gap-3 sm:flex-row">
           <input
@@ -192,7 +217,7 @@ function ChoiceBody({
             disabled={!text.trim()}
             className="cursor-pointer rounded-2xl border border-[color:var(--color-halo)]/40 px-6 py-4 text-base font-medium text-[color:var(--color-halo)] transition-all duration-200 hover:bg-[color:var(--color-halo)]/10 focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:outline-none active:scale-[0.985] disabled:cursor-not-allowed disabled:border-white/10 disabled:text-white/20 disabled:hover:bg-transparent"
           >
-            Answer
+            {submitLabel}
           </button>
         </div>
       </form>

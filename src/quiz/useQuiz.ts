@@ -1,22 +1,24 @@
 import { useCallback, useMemo, useState } from 'react'
-import {
-  EXISTENCE_QUESTION,
-  GRAPH,
-  START_NODE,
-  type NodeId,
-  type QuizNode,
-} from './graph'
+import { GRAPH, START_NODE, type NodeId, type QuizNode } from './graph'
+
+/**
+ * What the player answered, stored as a reference rather than a rendered
+ * string, so the recorded path re-renders in whatever language is active.
+ */
+export type TraceAnswer =
+  | { kind: 'yes' }
+  | { kind: 'no' }
+  | { kind: 'acknowledge' }
+  | { kind: 'option'; optionId: string }
+  | { kind: 'typed'; text: string }
 
 export interface TraceEntry {
   key: number
-  /** The question or statement the player was shown. */
-  prompt: string
-  /** What they answered. */
-  answer: string
-  /** True when the answer sent them backwards in the graph. */
+  /** Node whose prompt was shown — 'exist' when a leaf re-asked the question. */
+  promptNode: NodeId
+  answer: TraceAnswer
+  /** True when the answer sent the player backwards in the graph. */
   loopback?: boolean
-  /** True when the answer was typed rather than picked. */
-  typed?: boolean
 }
 
 interface QuizState {
@@ -51,26 +53,21 @@ export function useQuiz() {
       entry: Omit<TraceEntry, 'key'>,
       opts: { reason?: string | null } = {},
     ) => {
-      setState((prev) => {
-        const target = GRAPH[to]
-        const isLeaf = target.kind === 'leaf'
-        return {
-          current: to,
-          // Remember where a leaf was reached from, so "yes, God exists"
-          // can send the player back to the exact question that trapped them.
-          leafOrigin: isLeaf ? prev.current : null,
-          trace: [...prev.trace, { ...entry, key: prev.step }],
-          // The free-will branch is the one that circles: "could he have made
-          // free will without evil?" -> yes -> back to "then why didn't he?".
-          loops:
-            prev.current === 'could-freewill' && to === 'why-didnt'
-              ? prev.loops + 1
-              : prev.loops,
-          lastReason:
-            opts.reason === undefined ? prev.lastReason : opts.reason,
-          step: prev.step + 1,
-        }
-      })
+      setState((prev) => ({
+        current: to,
+        // Remember where a leaf was reached from, so "yes, God exists" can
+        // send the player back to the exact question that trapped them.
+        leafOrigin: GRAPH[to].kind === 'leaf' ? prev.current : null,
+        trace: [...prev.trace, { ...entry, key: prev.step }],
+        // The free-will branch is the one that circles: "could he have made
+        // free will without evil?" -> yes -> back to "then why didn't he?".
+        loops:
+          prev.current === 'could-freewill' && to === 'why-didnt'
+            ? prev.loops + 1
+            : prev.loops,
+        lastReason: opts.reason === undefined ? prev.lastReason : opts.reason,
+        step: prev.step + 1,
+      }))
     },
     [],
   )
@@ -79,8 +76,8 @@ export function useQuiz() {
     (yes: boolean) => {
       if (node.kind !== 'binary') return
       go(yes ? node.yes : node.no, {
-        prompt: node.prompt,
-        answer: yes ? 'Yes' : 'No',
+        promptNode: node.id,
+        answer: { kind: yes ? 'yes' : 'no' },
       })
     },
     [go, node],
@@ -88,17 +85,17 @@ export function useQuiz() {
 
   const acknowledge = useCallback(() => {
     if (node.kind !== 'premise') return
-    go(node.next, { prompt: node.prompt, answer: node.acknowledge })
+    go(node.next, { promptNode: node.id, answer: { kind: 'acknowledge' } })
   }, [go, node])
 
   const choose = useCallback(
     (optionId: string) => {
       if (node.kind !== 'choice') return
-      const option = node.options.find((o) => o.id === optionId)
+      const option = node.options.find((candidate) => candidate.id === optionId)
       if (!option) return
       go(
         option.next,
-        { prompt: node.prompt, answer: option.label },
+        { promptNode: node.id, answer: { kind: 'option', optionId } },
         { reason: null },
       )
     },
@@ -111,8 +108,8 @@ export function useQuiz() {
       const reason = text.trim()
       if (!reason) return
       go(
-        node.freeText.next,
-        { prompt: node.prompt, answer: reason, typed: true },
+        node.freeTextNext,
+        { promptNode: node.id, answer: { kind: 'typed', text: reason } },
         { reason },
       )
     },
@@ -124,14 +121,14 @@ export function useQuiz() {
     (yes: boolean) => {
       if (node.kind !== 'leaf') return
       if (!yes) {
-        go('victory', { prompt: EXISTENCE_QUESTION, answer: 'No' })
+        go('victory', { promptNode: 'exist', answer: { kind: 'no' } })
         return
       }
-      const back = state.leafOrigin ?? START_NODE
-      go(
-        back,
-        { prompt: EXISTENCE_QUESTION, answer: 'Yes', loopback: true },
-      )
+      go(state.leafOrigin ?? START_NODE, {
+        promptNode: 'exist',
+        answer: { kind: 'yes' },
+        loopback: true,
+      })
     },
     [go, node, state.leafOrigin],
   )
@@ -142,7 +139,7 @@ export function useQuiz() {
     () => ({
       steps: state.trace.length,
       loops: state.loops,
-      loopbacks: state.trace.filter((t) => t.loopback).length,
+      loopbacks: state.trace.filter((entry) => entry.loopback).length,
     }),
     [state.trace, state.loops],
   )

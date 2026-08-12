@@ -85,6 +85,30 @@ body {
   }
 }
 
+/*
+ * Small caps-and-tracking labels. Arabic has no letter case, and tracking
+ * pulls its connected letterforms apart, so the treatment is dropped there.
+ */
+.label {
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+}
+
+[lang='ar'] .label {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+/* Instrument Serif is Latin-only; other scripts need their own display face. */
+[lang='ar'] {
+  --font-display:
+    'Noto Naskh Arabic', 'Amiri', 'Geeza Pro', 'Times New Roman', serif;
+}
+
+[lang='ru'] {
+  --font-display: 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+}
+
 .glass {
   background: linear-gradient(
     160deg,
